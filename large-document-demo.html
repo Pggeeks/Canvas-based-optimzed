@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Canvas Editor - Optimized for Large Documents</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+    #editor {
+      width: 100vw;
+      height: 100vh;
+    }
+    .performance-info {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      z-index: 9999;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="editor"></div>
+  <div class="performance-info" id="performance-info">
+    Loading document...
+  </div>
+  
+  <script type="module">
+    // Import needed modules
+    import { createOptimizedEditor } from './src/plugins/virtualization';
+    import { PerformanceAnalyzer } from './src/editor/core/performance/PerformanceAnalyzer';
+    
+    // Set up error handling
+    window.onerror = function(message, source, lineno, colno, error) {
+      console.error('Error:', message, source, lineno, colno);
+      const infoElement = document.getElementById('performance-info');
+      infoElement.innerHTML += `<br><span style="color:red">ERROR: ${message}</span>`;
+      return false;
+    };
+    
+    // Function to log diagnostic information
+    function logDiagnostic(message) {
+      console.log(message);
+      const infoElement = document.getElementById('performance-info');
+      infoElement.innerHTML += `<br>${message}`;
+    }
+    
+    // Create a large document for testing
+    function generateLargeDocument(textCount = 10000, tableCount = 5) {
+      const elements = [];
+      
+      // Generate text elements
+      for (let i = 0; i < textCount; i++) {
+        elements.push({
+          type: 'text',
+          value: `This is text element ${i}. It contains some content to test virtualization optimization. `
+        });
+        
+        // Add a few line breaks
+        if (i % 100 === 0) {
+          elements.push({
+            type: 'text', 
+            value: '\n'
+          });
+        }
+      }
+      
+      // Generate tables
+      for (let t = 0; t < tableCount; t++) {
+        const rows = 10 + Math.floor(Math.random() * 10);
+        const cols = 5 + Math.floor(Math.random() * 5);
+        
+        const trList = [];
+        
+        // Create rows
+        for (let r = 0; r < rows; r++) {
+          const tdList = [];
+          
+          // Create cells
+          for (let c = 0; c < cols; c++) {
+            tdList.push({
+              colspan: 1,
+              rowspan: 1,
+              value: [
+                {
+                  type: 'text',
+                  value: `Table ${t}, Row ${r}, Col ${c}`
+                }
+              ]
+            });
+          }
+          
+          trList.push({
+            height: 40,
+            tdList
+          });
+        }
+        
+        // Add table to elements
+        elements.push({
+          type: 'table',
+          trList,
+          width: 600
+        });
+        
+        // Add space after table
+        elements.push({ type: 'text', value: '\n\n' });
+      }
+      
+      return elements;
+    }
+    
+    // Function to load the editor
+    async function initEditor() {
+      logDiagnostic('Starting large document test...');
+      
+      try {
+        // Generate test data
+        logDiagnostic('Generating test document...');
+        const elements = generateLargeDocument();
+        
+        // Analyze performance before rendering
+        logDiagnostic('Analyzing document performance characteristics...');
+        const perfInfo = PerformanceAnalyzer.analyzeDocument(elements);
+        console.log('Performance analysis:', perfInfo);
+        
+        // Update performance info display
+        document.getElementById('performance-info').innerHTML = `
+          Document size: ${perfInfo.documentSize} elements<br>
+          Tables: ${perfInfo.tableCount} (${perfInfo.largeTableCount} large)<br>
+          Est. render time: ${perfInfo.estimatedRenderTime}ms<br>
+          Optimization: ${perfInfo.shouldOptimize ? 'Enabled' : 'Disabled'}
+        `;
+        
+        // Create the optimized editor
+        logDiagnostic('Creating optimized editor...');
+        const container = document.getElementById('editor');
+        const editor = createOptimizedEditor(container, elements, {
+          mode: 'edit',
+          pageMode: 'paging'
+        });
+        
+        // Measure actual render time
+        const startTime = performance.now();
+        
+        // Wait for editor to finish initial rendering
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        const endTime = performance.now();
+        const actualRenderTime = Math.round(endTime - startTime);
+        
+        // Update performance info with actual render time
+        const perfInfoElement = document.getElementById('performance-info');
+        perfInfoElement.innerHTML += `<br>Actual render time: ${actualRenderTime}ms`;
+        
+        // Hide performance info after 10 seconds
+        setTimeout(() => {
+          perfInfoElement.style.opacity = '0.2';
+          perfInfoElement.addEventListener('mouseenter', () => {
+            perfInfoElement.style.opacity = '1';
+          });
+          perfInfoElement.addEventListener('mouseleave', () => {
+            perfInfoElement.style.opacity = '0.2';
+          });
+        }, 10000);
+      } catch (error) {
+        console.error('Error initializing editor:', error);
+        logDiagnostic(`Error initializing editor: ${error.message}`);
+      }
+    }
+    
+    // Initialize when the page loads
+    window.addEventListener('load', initEditor);
+  </script>
+</body>
+</html>

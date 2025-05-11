@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Virtualization Plugin Exports</title>
+  <style>
+    body {
+      margin: 20px;
+      font-family: Arial, sans-serif;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+    }
+    .success {
+      color: green;
+      font-weight: bold;
+    }
+    .error {
+      color: red;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>Virtualization Plugin Export Test</h1>
+  <p>This page tests if the virtualization plugin exports are working correctly.</p>
+  
+  <div id="results">Testing...</div>
+  
+  <script type="module">
+    const resultsElement = document.getElementById('results');
+    
+    function log(message, isError = false) {
+      console.log(message);
+      const logElement = document.createElement('pre');
+      logElement.className = isError ? 'error' : 'success';
+      logElement.textContent = message;
+      resultsElement.appendChild(logElement);
+    }
+    
+    try {
+      // Test import
+      log("1. Attempting to import from virtualization module...");
+      
+      // Import the virtualization module
+      const virtualizationModule = await import('./src/plugins/virtualization');
+      
+      log("2. Module imported successfully! Here's what was exported:");
+      log(Object.keys(virtualizationModule).join(', '));
+      
+      // Check for createOptimizedEditor
+      if (typeof virtualizationModule.createOptimizedEditor === 'function') {
+        log("✓ createOptimizedEditor is a function");
+      } else {
+        log("✗ createOptimizedEditor is not exported correctly", true);
+      }
+      
+      // Check for VirtualizationPlugin
+      if (virtualizationModule.VirtualizationPlugin && 
+          typeof virtualizationModule.VirtualizationPlugin.register === 'function') {
+        log("✓ VirtualizationPlugin is exported with register method");
+      } else {
+        log("✗ VirtualizationPlugin is not exported correctly", true);
+      }
+      
+      // Check for other utilities
+      const expectedUtilities = [
+        'DrawExtensions', 
+        'PerformanceManager', 
+        'PerformanceAnalyzer',
+        'VirtualizationExtensionInitializer'
+      ];
+      
+      for (const util of expectedUtilities) {
+        if (virtualizationModule[util]) {
+          log(`✓ ${util} is exported`);
+        } else {
+          log(`✗ ${util} is missing`, true);
+        }
+      }
+      
+      log("Export test completed!");
+      
+    } catch (error) {
+      log(`Error testing exports: ${error.message}`, true);
+      log(`Stack trace: ${error.stack}`, true);
+    }
+  </script>
+</body>
+</html>

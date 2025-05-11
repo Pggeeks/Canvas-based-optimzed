@@ -1,0 +1,60 @@
+import { Draw } from '../../editor/core/draw/Draw';
+import { DrawExtensions } from '../../editor/core/draw/DrawExtensions';
+import { PerformanceManager } from '../../editor/core/performance/PerformanceManager';
+import Editor from '../../editor';
+
+/**
+ * VirtualizationPlugin - Improves editor performance for large documents
+ * by optimizing rendering of off-screen content
+ */
+export class VirtualizationPlugin {
+  /**
+   * Register the plugin with an editor instance
+   */
+  public static register(editor: Editor): void {
+    if (!editor || !editor.use) {
+      console.error('Editor instance is required to register the virtualization plugin');
+      return;
+    }
+    
+    try {
+      // Use the plugin system to access the editor
+      editor.use((editorInstance) => {
+        // Log access attempt for debugging
+        console.log('Attempting to access Draw component for virtualization');
+        
+        // Access the Draw component which is not directly exposed
+        // First try to access via internal command structure
+        let draw: Draw | null = null;
+        
+        // Try different paths to access the Draw component
+        if ((editorInstance.command as any)?._command?.draw) {
+          draw = (editorInstance.command as any)._command.draw;
+          console.log('Found Draw via _command.draw');
+        } else if ((editorInstance as any)?.draw) {
+          draw = (editorInstance as any).draw;
+          console.log('Found Draw via direct access');
+        } else if ((editorInstance as any)?._core?.draw) {
+          draw = (editorInstance as any)._core.draw;
+          console.log('Found Draw via _core.draw');
+        }
+        
+        if (!draw) {
+          console.error('Cannot access Draw component for virtualization plugin');
+          return;
+        }
+        
+        console.log('Initializing virtualization plugin');
+        
+        // Initialize performance manager
+        const performanceManager = PerformanceManager.getInstance();
+        performanceManager.initialize(draw);
+        
+        // Apply optimizations to Draw class
+        new DrawExtensions(draw);
+      });
+    } catch (error) {
+      console.error('Error registering virtualization plugin:', error);
+    }
+  }
+}

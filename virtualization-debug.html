@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtualization Debug Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+    .code { background: #f5f5f5; padding: 15px; border-radius: 5px; font-family: monospace; white-space: pre; }
+    .success { color: green; font-weight: bold; }
+    .error { color: red; font-weight: bold; }
+    .section { margin-bottom: 30px; border-bottom: 1px solid #ccc; padding-bottom: 20px; }
+    button { padding: 10px; margin: 5px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Virtualization Plugin Debug</h1>
+
+  <div class="section">
+    <h2>1. Check Module Exports</h2>
+    <button onclick="checkVirtualizationExports()">Test Virtualization Exports</button>
+    <div id="exports-result"></div>
+  </div>
+
+  <div class="section">
+    <h2>2. Test Individual Plugin Components</h2>
+    <button onclick="testVirtualizationPlugin()">Test VirtualizationPlugin</button>
+    <button onclick="testPerformanceManager()">Test PerformanceManager</button>
+    <div id="components-result"></div>
+  </div>
+
+  <div class="section">
+    <h2>3. Module Path Testing</h2>
+    <button onclick="testDirectImport()">Test Direct Import</button>
+    <div id="path-result"></div>
+  </div>
+
+  <script type="module">
+    window.log = function(message, containerId, isError = false) {
+      console.log(message);
+      const container = document.getElementById(containerId);
+      const messageEl = document.createElement('div');
+      messageEl.className = 'code ' + (isError ? 'error' : 'success');
+      messageEl.textContent = message;
+      container.appendChild(messageEl);
+    };
+
+    window.checkVirtualizationExports = async function() {
+      const resultDiv = document.getElementById('exports-result');
+      resultDiv.innerHTML = '';
+      
+      try {
+        log('Starting export test...', 'exports-result');
+        const virtualModule = await import('./src/plugins/virtualization/index.ts');
+        log(`Module imported. Available exports: ${Object.keys(virtualModule).join(', ')}`, 'exports-result');
+        
+        // Check createOptimizedEditor
+        if (typeof virtualModule.createOptimizedEditor === 'function') {
+          log('✓ createOptimizedEditor is a function', 'exports-result');
+        } else {
+          log('✗ createOptimizedEditor not found or not a function', 'exports-result', true);
+        }
+        
+        // Check VirtualizationPlugin
+        if (virtualModule.VirtualizationPlugin && typeof virtualModule.VirtualizationPlugin.register === 'function') {
+          log('✓ VirtualizationPlugin has register method', 'exports-result');
+        } else {
+          log('✗ VirtualizationPlugin missing or invalid', 'exports-result', true);
+        }
+      } catch (error) {
+        log(`Error testing exports: ${error.message}`, 'exports-result', true);
+        log(`Stack: ${error.stack}`, 'exports-result', true);
+      }
+    };
+
+    window.testVirtualizationPlugin = async function() {
+      const resultDiv = document.getElementById('components-result');
+      resultDiv.innerHTML = '';
+      
+      try {
+        log('Testing VirtualizationPlugin...', 'components-result');
+        const moduleFrom = await import('./src/plugins/virtualization/VirtualizationPlugin.ts');
+        log(`VirtualizationPlugin.ts exports: ${Object.keys(moduleFrom).join(', ')}`, 'components-result');
+      } catch (error) {
+        log(`Error importing VirtualizationPlugin: ${error.message}`, 'components-result', true);
+      }
+    };
+
+    window.testPerformanceManager = async function() {
+      const resultDiv = document.getElementById('components-result');
+      resultDiv.innerHTML = '';
+      
+      try {
+        log('Testing PerformanceManager...', 'components-result');
+        const moduleFrom = await import('./src/editor/core/performance/PerformanceManager.ts');
+        log(`PerformanceManager.ts exports: ${Object.keys(moduleFrom).join(', ')}`, 'components-result');
+      } catch (error) {
+        log(`Error importing PerformanceManager: ${error.message}`, 'components-result', true);
+      }
+    };
+
+    window.testDirectImport = async function() {
+      const resultDiv = document.getElementById('path-result');
+      resultDiv.innerHTML = '';
+      
+      try {
+        log('Testing direct import paths...', 'path-result');
+        
+        // Try direct import of VirtualizationPlugin
+        try {
+          const plugin = await import('./src/plugins/virtualization/VirtualizationPlugin.ts');
+          log('Direct import of VirtualizationPlugin.ts successful!', 'path-result');
+          log(`Exports: ${Object.keys(plugin).join(', ')}`, 'path-result');
+        } catch (e) {
+          log(`Failed to import VirtualizationPlugin.ts: ${e.message}`, 'path-result', true);
+        }
+        
+        // Try direct import of index.ts
+        try {
+          const index = await import('./src/plugins/virtualization/index.ts');
+          log('Direct import of index.ts successful!', 'path-result');
+          log(`Exports: ${Object.keys(index).join(', ')}`, 'path-result');
+        } catch (e) {
+          log(`Failed to import index.ts: ${e.message}`, 'path-result', true);
+        }
+        
+      } catch (error) {
+        log(`General error: ${error.message}`, 'path-result', true);
+      }
+    };
+  </script>
+</body>
+</html>
